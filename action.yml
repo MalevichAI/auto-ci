@@ -1,0 +1,60 @@
+name: "Push images with apps"
+description: "Find the directories with Dockerfiles (not-recursively), build images and push them to the registry"
+author: RamPrin
+branding:
+  icon: arrow-right
+  color: purple
+inputs:
+  registry:
+    description: "Which registry to push into (ecr, cr.yandex, ghcr)"
+    required: false
+    default: "docker hub"
+  registry_url:
+    description: "The url of the registry (public.ecr.aws, cr.yandex, ghcr.io)"
+    required: false
+    default: "registry-1.docker.io"
+  registry_id:
+    description: "The ID of registry ((ECR):registry-alias, (Yandex):registry-id, (ghcr):namespace)"
+    required: true
+  username:
+    description: "String to enter into docker login --username ((ECR):ACCESS_KEY_ID, (Yandex):[iam, oauth, json_key], (ghcr):USERNAME)"
+    required: true
+  password:
+    description: "String to enter into docker login --password ((ECR):SECRET_ACCESS_KEY, (Yandex):[<Identity and Access Management token>, <OAuth token>, key.json], (ghcr):ACCESS_TOKEN)"
+    required: true
+runs:
+  using: composite
+  steps:
+      - if: ${{ inputs.registry == 'ecr' }}
+        uses: unfor19/install-aws-cli-action@v1
+      - if: ${{ inputs.registry == 'ecr' }}
+        run: |
+          aws configure set aws_access_key_id ${{ inputs.username }}
+          aws configure set aws_secret_access_key ${{ inputs.password }}
+          aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{ inputs.registry_url }}
+        shell: 'bash'
+      - if: ${{ inputs.registry != 'ecr' }}
+        run: |
+          echo ${{ inputs.password }} | docker login --username ${{inputs.username}} --password-stdin ${{ inputs.registry_url }}
+        shell: 'bash'
+      - run: |
+          dirs=*/
+          for dir in $dirs
+          do
+          name=$(basename $dir)
+          if [[ -e $dir ]] && [[ $name != .* ]] && [[ -f $name/Dockerfile ]];
+            then
+              echo 'Make image from $name/Dockerfile'
+              docker build -t ${{ inputs.registry_url }}/${{ inputs.registry_id }}/$name:${{ github.sha }} \
+                            -t ${{ inputs.registry_url }}/${{ inputs.registry_id }}/$name:latest $dir
+              if [[ ${{ inputs.registry }} == 'ecr' ]];
+                then
+                          aws ecr-public describe-repositories --repository-names $name --region us-east-1 || aws ecr-public create-repository --repository-name $name --region us-east-1
+                fi
+                    docker push --all-tags ${{inputs.registry_url}}/${{inputs.registry_id}}/$name
+            fi
+          done
+        shell: 'bash'
+      - run: |
+          docker logout
+        shell: 'bash'
