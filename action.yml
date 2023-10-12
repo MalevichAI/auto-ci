@@ -1,4 +1,4 @@
-name: "Push images with apps"
+name: "Build and push"
 description: "Find the directories with Dockerfiles (not-recursively), build images and push them to the registry"
 author: RamPrin
 branding:
