@@ -6,6 +6,7 @@ This action is created to:
 - Iterate through the directories of root repository (means non-recursively).
 - Build the images and push them into container registry.
 ## Inputs
+- **directories**: Which directories to search in. Search in any top-level directory by default.
 - **registry**: Which registry to push into:
     - ecr
     - cr.yandex
