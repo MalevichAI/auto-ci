@@ -6,7 +6,8 @@ This action is created to:
 - Iterate through the directories of root repository (means non-recursively).
 - Build the images and push them into container registry.
 ## Inputs
-- **directories**: Which directories to search in. Search in any top-level directory by default.
+- **directories**: Which directories to search in. By default searches in any directory which was changed from the previous commit.
+    - "*/" for all top-level directories
 - **registry**: Which registry to push into:
     - ecr
     - cr.yandex
@@ -28,4 +29,5 @@ This action is created to:
     - _Yandex:_ [\<Identity and Access Management token\>, \<OAuth token\>, key.json]
     - _ghcr:_ ACCESS_TOKEN
 ## Note
-On version 0.1.0 this action works only with public.ecr 
+On version 0.1.0 this action works only with public.ecr and searches only in top-level folders <br>
+On version 0.2.0 directories changed from "*/" to 'changed from the previous commit'. Added input `directories` <br>
