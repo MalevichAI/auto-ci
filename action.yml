@@ -83,6 +83,7 @@ runs:
                   then
                             aws ecr-public describe-repositories --repository-names $name --region us-east-1 || aws ecr-public create-repository --repository-name $name --region us-east-1
                 fi
+                docker push -q --all-tags ${{inputs.registry_url}}/${{inputs.registry_id}}/$name
                 if [[ ${{ inputs.image_user }} == 'None' ]];
                 then
                   space ci report ./$dir $name \
