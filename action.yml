@@ -6,9 +6,9 @@ branding:
   color: purple
 inputs:
   directories:
-    description: "Which directories to search in. Search in any top-level directory by default."
+    description: "Which directories to search in. By default searches in any directory which was changed from the previous commit."
     required: false
-    default: "$(git log --name-only --diff-filter=d -1 | grep "/" | cut -d '/' -f1 | sort -u)"
+    default: "$(git log --name-only --diff-filter=d -1 | grep '/' | cut -d '/' -f1 | sort -u)"
   registry:
     description: "Which registry to push into (ecr, cr.yandex, ghcr)"
     required: false
@@ -26,6 +26,24 @@ inputs:
   password:
     description: "String to enter into docker login --password ((ECR):SECRET_ACCESS_KEY, (Yandex):[<Identity and Access Management token>, <OAuth token>, key.json], (ghcr):ACCESS_TOKEN)"
     required: true
+  image_user:
+    description: "Value to put in --image-user of space ci report" 
+    required: false
+    default: "None"
+  image_token:
+    description: "Value to put in --image-token of space ci report"
+    required: false
+    default: "None"
+  space_username:
+    description: "Malevich-space username"
+    required: true
+  space_password:
+    description: "Malevich-space password"
+    required: true
+  api_url:
+    description: "URL of an API"
+    required: true
+
 runs:
   using: composite
   steps:
@@ -41,6 +59,11 @@ runs:
         run: |
           echo ${{ inputs.password }} | docker login --username ${{inputs.username}} --password-stdin ${{ inputs.registry_url }}
         shell: 'bash'
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+        run: |
+          pip install malevich-space>=0.2.3
       - run: |
           dirs=${{ inputs.directories }}
           if [[ ${dirs[0]} == "" ]];
@@ -50,17 +73,32 @@ runs:
           fi
           for dir in $dirs
           do
-          name=$(basename $dir)
-          if [[ -e $dir ]] && [[ $name != .* ]] && [[ -f $name/Dockerfile ]];
-            then
-              echo 'Make image from $name/Dockerfile'
-              docker build -t ${{ inputs.registry_url }}/${{ inputs.registry_id }}/$name:${{ github.sha }} \
-                            -t ${{ inputs.registry_url }}/${{ inputs.registry_id }}/$name:latest $dir
-              if [[ ${{ inputs.registry }} == 'ecr' ]];
+            name=$(basename $dir)
+            if [[ -e $dir ]] && [[ $name != .* ]] && [[ -f $name/Dockerfile ]];
+              then
+                echo 'Make image from $name/Dockerfile'
+                docker build -q -t ${{ inputs.registry_url }}/${{ inputs.registry_id }}/$name:${{ github.sha }} $dir
+                if [[ ${{ inputs.sregistry }} == 'ecr' ]];
+                  then
+                            aws ecr-public describe-repositories --repository-names $name --region us-east-1 || aws ecr-public create-repository --repository-name $name --region us-east-1
+                fi
+                if [[ ${{ inputs.image_user }} == 'None' ]];
                 then
-                          aws ecr-public describe-repositories --repository-names $name --region us-east-1 || aws ecr-public create-repository --repository-name $name --region us-east-1
-              fi
-              docker push --all-tags ${{inputs.registry_url}}/${{inputs.registry_id}}/$name
+                  space ci report ./$dir $name \
+                  ${{ github.sha }} "${{ github.event.head_commit.message }}" done \
+                  ${{ inputs.registry_url }}/${{ inputs.registry_id }}/$name:${{ github.sha }} \
+                  --space-username=${{ inputs.space_username }} --space-password=${{ inputs.space_password }} \
+                  --api-url=${{ inputs.api_url }}
+                else
+                  space ci report ./$dir $name \
+                  ${{ github.sha }} "${{ github.event.head_commit.message }}" done \
+                  ${{ inputs.registry_url }}/${{ inputs.registry_id }}/$name:${{ github.sha }} \
+                  --image-user=${{ inputs.image_user }} --image-token=${{ image_token }} \
+                  --space-username=${{ inputs.space_username }} --space-password=${{ inputs.space_password }} \
+                  --api-url=${{ inputs.api_url }}
+                fi
+                docker tag ${{ inputs.registry_url }}/${{ inputs.registry_id }}/$name:${{ github.sha }} ${{ inputs.registry_url }}/${{ inputs.registry_id }}/$name:latest
+                docker push -q --all-tags ${{inputs.registry_url}}/${{inputs.registry_id}}/$name
             fi
           done
         shell: 'bash'
