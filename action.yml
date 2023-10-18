@@ -94,7 +94,7 @@ runs:
                   space ci report ./$dir $name \
                   ${{ github.sha }} "${{ github.event.head_commit.message }}" done \
                   ${{ inputs.registry_url }}/${{ inputs.registry_id }}/$name:${{ github.sha }} \
-                  --image-user=${{ inputs.image_user }} --image-token=${{ image_token }} \
+                  --image-user=${{ inputs.image_user }} --image-token=${{ inputs.image_token }} \
                   --space-username=${{ inputs.space_username }} --space-password=${{ inputs.space_password }} \
                   --api-url=${{ inputs.api_url }}
                 fi
