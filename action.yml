@@ -79,7 +79,7 @@ runs:
               then
                 echo 'Make image from $name/Dockerfile'
                 docker build -q -t ${{ inputs.registry_url }}/${{ inputs.registry_id }}/$name:${{ github.sha }} $dir
-                if [[ ${{ inputs.sregistry }} == 'ecr' ]];
+                if [[ ${{ inputs.registry }} == 'ecr' ]];
                   then
                             aws ecr-public describe-repositories --repository-names $name --region us-east-1 || aws ecr-public create-repository --repository-name $name --region us-east-1
                 fi
