@@ -62,8 +62,9 @@ runs:
       - uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-        run: |
+      - run: |
           pip install malevich-space>=0.2.3
+        shell: 'bash'
       - run: |
           dirs=${{ inputs.directories }}
           if [[ ${dirs[0]} == "" ]];
