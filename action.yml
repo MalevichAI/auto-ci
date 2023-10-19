@@ -52,8 +52,8 @@ runs:
             username=${{ inputs.username }}
             password=${{ inputs.api_url.password }}
           fi
-          echo "username=$username" >> $GITHUB_OUTPUT
-          echo "password=$password" >> $GITHUB_OUTPUT
+          echo "$username" >> USERNAME
+          echo "$password" >> PASSWORD
           echo $password | docker login --username $username --password-stdin ${{ inputs.registry_url }}
         id: docker_login
         shell: 'bash'
@@ -90,7 +90,7 @@ runs:
                 space ci report ./$dir ${{ steps.extract_branch.outputs.branch }} \
                 ${{ github.sha }} "${{ github.event.head_commit.message }}" done \
                 ${{ inputs.registry_url }}/${{ inputs.registry_id }}/$name:${{ github.sha }} \
-                --image-user=${{ steps.docker_login.outputs.username }} --image-token=${{ steps.docker_login.outputs.password }} \
+                --image-user=$(cat USERNAME) --image-token=$(cat PASSWORD) \
                 --space-username=${{ inputs.space_username }} --space-password=${{ inputs.space_password }} \
                 --api-url=${{ inputs.api_url }}
   
