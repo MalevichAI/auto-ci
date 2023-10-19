@@ -41,11 +41,19 @@ runs:
   steps:
       - if: ${{ inputs.registry == 'ecr' }}
         uses: unfor19/install-aws-cli-action@v1
-      - if: ${{ inputs.registry == 'ecr' }}
-        run: |
-          aws configure set aws_access_key_id ${{ inputs.username }}
-          aws configure set aws_secret_access_key ${{ inputs.password }}
-          aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{ inputs.registry_url }}
+      - run: |
+          if [[ ${{ inputs.registry }} == 'ecr' ]];
+          then
+            aws configure set aws_access_key_id ${{ inputs.username }}
+            aws configure set aws_secret_access_key ${{ inputs.password }}
+            password=$(aws ecr-public get-login-password --region us-east-1)
+            echo "password=$password" >> $GITHUB_OUTPUT
+          else
+            password=${{ inputs.api_url.password }}
+            echo "password=$password" >> $GITHUB_OUTPUT
+          fi
+          echo $password | docker login --username ${{ inputs.username }} --password-stdin ${{ inputs.registry_url }}
+        id: docker_login
         shell: 'bash'
       - if: ${{ inputs.registry != 'ecr' }}
         run: |
@@ -84,7 +92,7 @@ runs:
                 space ci report ./$dir ${{ steps.extract_branch.outputs.branch }} \
                 ${{ github.sha }} "${{ github.event.head_commit.message }}" done \
                 ${{ inputs.registry_url }}/${{ inputs.registry_id }}/$name:${{ github.sha }} \
-                --image-user=${{ inputs.username }} --image-token=${{ inputs.password }} \
+                --image-user=${{ inputs.username }} --image-token=${{ steps.docker_login.outputs.password }} \
                 --space-username=${{ inputs.space_username }} --space-password=${{ inputs.space_password }} \
                 --api-url=${{ inputs.api_url }}
   
