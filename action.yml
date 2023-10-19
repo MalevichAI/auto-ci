@@ -100,5 +100,7 @@ runs:
           done
         shell: 'bash'
       - run: |
+          rm USERNAME
+          rm PASSWORD
           docker logout
         shell: 'bash'
