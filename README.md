@@ -28,8 +28,6 @@ This action is created to:
     - _ECR:_ SECRET_ACCESS_KEY
     - _Yandex:_ [\<Identity and Access Management token\>, \<OAuth token\>, key.json]
     - _ghcr:_ ACCESS_TOKEN
-- **image_user**: Value to put in `--image-user` of `space ci report`
-- **image_token**: Value to put in `--image-token` of `space ci report`
 - **space_username**: Malevich-space username
 - **space_password**: Malevich-space password
 - **api_url**: URL of an API
