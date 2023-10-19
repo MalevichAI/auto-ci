@@ -43,6 +43,8 @@ inputs:
   api_url:
     description: "URL of an API"
     required: true
+  branch_name:
+    description: "Name of the branch for "
 
 runs:
   using: composite
@@ -65,6 +67,9 @@ runs:
       - run: |
           pip install malevich-space>=0.2.3
         shell: 'bash'
+      - shell: bash
+        run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
+        id: extract_branch
       - run: |
           dirs=${{ inputs.directories }}
           if [[ ${dirs[0]} == "" ]];
@@ -86,13 +91,13 @@ runs:
                 docker push -q --all-tags ${{inputs.registry_url}}/${{inputs.registry_id}}/$name
                 if [[ ${{ inputs.image_user }} == 'None' ]];
                 then
-                  space ci report ./$dir $name \
+                  space ci report ./$dir ${{ steps.extract_branch.outputs.branch }} \
                   ${{ github.sha }} "${{ github.event.head_commit.message }}" done \
                   ${{ inputs.registry_url }}/${{ inputs.registry_id }}/$name:${{ github.sha }} \
                   --space-username=${{ inputs.space_username }} --space-password=${{ inputs.space_password }} \
                   --api-url=${{ inputs.api_url }}
                 else
-                  space ci report ./$dir $name \
+                  space ci report ./$dir ${{ steps.extract_branch.outputs.branch }} \
                   ${{ github.sha }} "${{ github.event.head_commit.message }}" done \
                   ${{ inputs.registry_url }}/${{ inputs.registry_id }}/$name:${{ github.sha }} \
                   --image-user=${{ inputs.image_user }} --image-token=${{ inputs.image_token }} \
