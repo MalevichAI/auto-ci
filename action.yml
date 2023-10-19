@@ -47,17 +47,15 @@ runs:
             aws configure set aws_access_key_id ${{ inputs.username }}
             aws configure set aws_secret_access_key ${{ inputs.password }}
             password=$(aws ecr-public get-login-password --region us-east-1)
-            echo "password=$password" >> $GITHUB_OUTPUT
+            username=AWS
           else
+            username=${{ inputs.username }}
             password=${{ inputs.api_url.password }}
-            echo "password=$password" >> $GITHUB_OUTPUT
           fi
-          echo $password | docker login --username ${{ inputs.username }} --password-stdin ${{ inputs.registry_url }}
+          echo "username=$username" >> $GITHUB_OUTPUT
+          echo "password=$password" >> $GITHUB_OUTPUT
+          echo $password | docker login --username $username --password-stdin ${{ inputs.registry_url }}
         id: docker_login
-        shell: 'bash'
-      - if: ${{ inputs.registry != 'ecr' }}
-        run: |
-          echo ${{ inputs.password }} | docker login --username ${{ inputs.username }} --password-stdin ${{ inputs.registry_url }}
         shell: 'bash'
       - uses: actions/setup-python@v4
         with:
@@ -80,19 +78,19 @@ runs:
             name=$(basename $dir)
             if [[ -e $dir ]] && [[ $name != .* ]] && [[ -f $name/Dockerfile ]];
               then
-                echo 'Make image from $name/Dockerfile'
                 docker build -q -t ${{ inputs.registry_url }}/${{ inputs.registry_id }}/$name:${{ github.sha }} $dir
                 if [[ ${{ inputs.registry }} == 'ecr' ]];
-                  then
-                            aws ecr-public describe-repositories --repository-names $name --region us-east-1 || aws ecr-public create-repository --repository-name $name --region us-east-1
+                then
+                    aws ecr-public describe-repositories --repository-names $name --region us-east-1 || \
+                    aws ecr-public create-repository --repository-name $name --region us-east-1
                 fi
   
                 docker push -q --all-tags ${{inputs.registry_url}}/${{inputs.registry_id}}/$name
-  
+                
                 space ci report ./$dir ${{ steps.extract_branch.outputs.branch }} \
                 ${{ github.sha }} "${{ github.event.head_commit.message }}" done \
                 ${{ inputs.registry_url }}/${{ inputs.registry_id }}/$name:${{ github.sha }} \
-                --image-user=${{ inputs.username }} --image-token=${{ steps.docker_login.outputs.password }} \
+                --image-user=${{ steps.docker_login.outputs.username }} --image-token=${{ steps.docker_login.outputs.password }} \
                 --space-username=${{ inputs.space_username }} --space-password=${{ inputs.space_password }} \
                 --api-url=${{ inputs.api_url }}
   
