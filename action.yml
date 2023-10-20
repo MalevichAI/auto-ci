@@ -60,7 +60,12 @@ runs:
             aws configure set aws_access_key_id ${{ inputs.username }}
             aws configure set aws_secret_access_key ${{ inputs.password }}
             aws configure set region ${{ inputs.region }}
-            password=$(aws ecr-public get-login-password --region us-east-1)
+            if [[ ${{ inputs.registry }} == 'ecr-private' ]];
+            then
+              password=$(aws ecr get-login-password)
+            else
+              password=$(aws ecr-public get-login-password)
+            fi
             username=AWS
           else
             echo 'Default log in'
