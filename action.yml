@@ -44,11 +44,11 @@ runs:
   using: composite
   steps:
       - name: "Install aws cli"
-        if: ${{ inputs.registry == 'ecr*' }}
+        if: ${{ inputs.registry == ecr* }}
         uses: unfor19/install-aws-cli-action@v1
       - name: Docker Login
         run: |
-          if [[ ${{ inputs.registry }} == 'ecr' ]];
+          if [[ ${{ inputs.registry }} == ecr* ]];
           then
             if [[ ${{ inputs.registry }} == 'ecr-private' ]];
               then
