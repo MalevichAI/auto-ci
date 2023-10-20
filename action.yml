@@ -50,6 +50,12 @@ runs:
         run: |
           if [[ ${{ inputs.registry }} == 'ecr' ]];
           then
+            if [[ ${{ inputs.registry }} == 'ecr-private' ]];
+              then
+                image_url=${{ inputs.registry_id }}.dkr.ecr.${{ inputs.region }}.amazonaws.com
+              else
+                image_url=${{ inputs.registry_url }}/${{ inputs.registry_id }}
+            fi
             echo 'Log in via AWS CLI'
             aws configure set aws_access_key_id ${{ inputs.username }}
             aws configure set aws_secret_access_key ${{ inputs.password }}
@@ -63,7 +69,7 @@ runs:
           fi
           echo "$username" >> USERNAME
           echo "$password" >> PASSWORD
-          echo $password | docker login --username $username --password-stdin ${{ inputs.registry_url }}
+          echo $password | docker login --username $username --password-stdin $image_url
         id: docker_login
         shell: 'bash'
       - uses: actions/setup-python@v4
@@ -85,17 +91,17 @@ runs:
            echo "No changed directories, exiting..."
            exit 0
           fi
+          if [[ ${{ inputs.registry }} == 'ecr-private' ]];
+          then
+            image_url=${{ inputs.registry_id }}.dkr.ecr.${{ inputs.region }}.amazonaws.com
+          else
+            image_url=${{ inputs.registry_url }}/${{ inputs.registry_id }}
+          fi
           for dir in $dirs
           do
             name=$(basename $dir)
             if [[ -e $dir ]] && [[ $name != .* ]] && [[ -f $name/Dockerfile ]];
             then
-                if [[ ${{ inputs.registry }} == 'ecr-private' ]];
-                then
-                  image_url=${{ inputs.registry_id }}.dkr.ecr.${{ inputs.region }}.amazonaws.com
-                else
-                  image_url=${{ inputs.registry_url }}/${{ inputs.registry_id }}
-                fi
                 echo "Building ${name}"
                 docker build -q -t $image_url/$name:${{ github.sha }} $dir
                 if [[ ${{ inputs.registry }} == ecr* ]];
