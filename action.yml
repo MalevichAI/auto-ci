@@ -121,16 +121,28 @@ runs:
                     aws ecr create-repository --repository-name $name 
                   fi
                 fi
+                
                 echo "Pushing ${name}"
                 docker push -q --all-tags $image_url/$name
-                echo "Testing ${name}"
-                space ci report ./$dir ${{ steps.extract_branch.outputs.branch }} \
-                ${{ github.sha }} "${{ github.event.head_commit.message }}" done \
-                $image_url/$name:${{ github.sha }} \
-                --image-user=$(cat USERNAME) --image-token=$(cat PASSWORD) \
-                --space-username=${{ inputs.space_username }} --space-password=${{ inputs.space_password }} \
-                --api-url=${{ inputs.api_url }}
-                echo "Pushing ${name} as latest"
+                
+                echo "Testing ${name}"  
+                if [[ ${{ inputs.username }} == "$(cat USERNAME)" ]];
+                then
+                  space ci report ./$dir ${{ steps.extract_branch.outputs.branch }} \
+                  ${{ github.sha }} "${{ github.event.head_commit.message }}" done \
+                  $image_url/$name:${{ github.sha }} \
+                  --image-user=$(cat USERNAME) --image-token=$(cat PASSWORD) \
+                  --space-username=${{ inputs.space_username }} --space-password=${{ inputs.space_password }} \
+                  --api-url=${{ inputs.api_url }}
+                else
+                  space ci report ./$dir ${{ steps.extract_branch.outputs.branch }} \
+                  ${{ github.sha }} "${{ github.event.head_commit.message }}" done \
+                  $image_url/$name:${{ github.sha }} \
+                  --space-username=${{ inputs.space_username }} --space-password=${{ inputs.space_password }} \
+                  --api-url=${{ inputs.api_url }}
+                fi  
+
+                echo "Tagging ${name} as latest and pushing"
                 docker tag $image_url/$name:${{ github.sha }} $image_url/$name:latest
                 docker push -q --all-tags $image_url/$name
             fi
