@@ -125,9 +125,10 @@ runs:
                 echo "Pushing ${name}"
                 docker push -q --all-tags $image_url/$name
                 
-                echo "Testing ${name}"  
+                echo -n "Testing ${name} "  
                 if [[ ${{ inputs.username }} == "$(cat USERNAME)" ]] && [[ ${{ inputs.password }} == "$(cat PASSWORD)" ]];
                 then
+                  echo "with credentials"
                   space ci report ./$dir ${{ steps.extract_branch.outputs.branch }} \
                   ${{ github.sha }} "$(git log | grep -P "commit [a-z0-9]{40}" -m 1 | cut -d ' ' -f2 | git log --format=%B -n 1)" done \
                   $image_url/$name:${{ github.sha }} \
@@ -135,6 +136,7 @@ runs:
                   --space-username=${{ inputs.space_username }} --space-password=${{ inputs.space_password }} \
                   --api-url=${{ inputs.api_url }}
                 else
+                  echo "without credentials"
                   space ci report ./$dir ${{ steps.extract_branch.outputs.branch }} \
                   ${{ github.sha }} "$(git log | grep -P "commit [a-z0-9]{40}" -m 1 | cut -d ' ' -f2 | git log --format=%B -n 1)" done \
                   $image_url/$name:${{ github.sha }} \
