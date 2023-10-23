@@ -62,19 +62,19 @@ runs:
             aws configure set region ${{ inputs.region }}
             if [[ ${{ inputs.registry }} == 'ecr-private' ]];
             then
-              password=$(aws ecr get-login-password)
+              token=$(aws ecr get-login-password)
             else
-              password=$(aws ecr-public get-login-password)
+              token=$(aws ecr-public get-login-password)
             fi
             username=AWS
           else
             echo 'Default log in'
             username=${{ inputs.username }}
-            password=${{ inputs.password }}
+            token=${{ inputs.password }}
           fi
           echo "$username" >> USERNAME
-          echo "$password" >> PASSWORD
-          echo $password | docker login --username $username --password-stdin $image_url
+          echo "$token" >> PASSWORD
+          echo $token | docker login --username $username --password-stdin $image_url
         id: docker_login
         shell: 'bash'
       - uses: actions/setup-python@v4
@@ -126,7 +126,7 @@ runs:
                 docker push -q --all-tags $image_url/$name
                 
                 echo "Testing ${name}"  
-                if [[ ${{ inputs.username }} == "$(cat USERNAME)" ]];
+                if [[ ${{ inputs.username }} == "$(cat USERNAME)" ]] && [[ ${{ inputs.password }} == "$(cat PASSWORD)" ]];
                 then
                   space ci report ./$dir ${{ steps.extract_branch.outputs.branch }} \
                   ${{ github.sha }} "$(git log | grep -P "commit [a-z0-9]{40}" -m 1 | cut -d ' ' -f2 | git log --format=%B -n 1)" done \
