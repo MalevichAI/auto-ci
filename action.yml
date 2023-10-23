@@ -70,7 +70,7 @@ runs:
           else
             echo 'Default log in'
             username=${{ inputs.username }}
-            password=${{ inputs.api_url.password }}
+            password=${{ inputs.password }}
           fi
           echo "$username" >> USERNAME
           echo "$password" >> PASSWORD
@@ -136,7 +136,7 @@ runs:
                   --api-url=${{ inputs.api_url }}
                 else
                   space ci report ./$dir ${{ steps.extract_branch.outputs.branch }} \
-                  ${{ github.sha }} "${{ github.event.head_commit.message }}" done \
+                  ${{ github.sha }} "$(git log | grep -P "commit [a-z0-9]{40}" -m 1 | cut -d ' ' -f2 | git log --format=%B -n 1)" done \
                   $image_url/$name:${{ github.sha }} \
                   --space-username=${{ inputs.space_username }} --space-password=${{ inputs.space_password }} \
                   --api-url=${{ inputs.api_url }}
