@@ -39,6 +39,9 @@ inputs:
   api_url:
     description: "URL of an API"
     required: true
+  org_id:
+    description: "space ci --space-org"
+    required: true
 
 runs:
   using: composite
@@ -133,14 +136,14 @@ runs:
                   ${{ github.sha }} "$(git log | grep -P "commit [a-z0-9]{40}" -m 1 | cut -d ' ' -f2 | git log --format=%B -n 1)" done \
                   $image_url/$name:${{ github.sha }} \
                   --image-user=$(cat USERNAME) --image-token=$(cat PASSWORD) \
-                  --space-username=${{ inputs.space_username }} --space-password=${{ inputs.space_password }} \
+                  --space-username=${{ inputs.space_username }} --space-password=${{ inputs.space_password }} --space-org $${{ inputs.org_id }} \
                   --api-url=${{ inputs.api_url }}
                 else
                   echo "without credentials"
                   space ci report ./$dir ${{ steps.extract_branch.outputs.branch }} \
                   ${{ github.sha }} "$(git log | grep -P "commit [a-z0-9]{40}" -m 1 | cut -d ' ' -f2 | git log --format=%B -n 1)" done \
                   $image_url/$name:${{ github.sha }} \
-                  --space-username=${{ inputs.space_username }} --space-password=${{ inputs.space_password }} \
+                  --space-username=${{ inputs.space_username }} --space-password=${{ inputs.space_password }} --space-org $${{ inputs.org_id }} \
                   --api-url=${{ inputs.api_url }}
                 fi  
 
