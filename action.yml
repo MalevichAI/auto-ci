@@ -11,12 +11,10 @@ inputs:
     default: "$(git log --name-only --diff-filter=d -1 | grep '/' | cut -d '/' -f1 | sort -u)"
   registry:
     description: "Which registry to push into (ecr, cr.yandex, ghcr)"
-    required: false
-    default: "docker hub"
+    required: true
   registry_url:
     description: "The url of the registry (public.ecr.aws, cr.yandex, ghcr.io)"
-    required: false
-    default: "registry-1.docker.io"
+    required: true
   registry_id:
     description: "The ID of registry ((ECR):registry-alias, (Yandex):registry-id, (ghcr):namespace)"
     required: true
@@ -46,6 +44,25 @@ inputs:
 runs:
   using: composite
   steps:
+      - name: Check inputs
+        run: |
+          keys=("REGISTRY_TYPE" "REGISTRY_URL" "REGISTRY_ID" "IMAGE_USERNAME" "IMAGE_PASSWORD" \
+          "SPACE_USERNAME" "SPACE_PASSWORD" "API_URL" "ORG_ID")
+
+          vals=("${{inputs.registry}}" "${{inputs.registry_url}}" "${{inputs.registry_id}}" \
+          "${{inputs.username}}" "${{inputs.password}}" "${{inputs.space_username}}" "${{inputs.space_password}}" \
+          "${{inputs.api_url}}" "${{inputs.org_id}}")
+
+          for i in ${!#vals}
+          do
+            if [[ vals[i] == "" ]];
+            then
+              echo "${keys[i]} is NULL, exiting..."
+              return 1
+            fi
+          done
+
+        shell: 'bash'
       - name: "Install aws cli"
         if: ${{ inputs.registry == 'ecr*' }}
         uses: unfor19/install-aws-cli-action@v1
