@@ -11,12 +11,10 @@ inputs:
     default: "$(git log --name-only --diff-filter=d -1 | grep '/' | cut -d '/' -f1 | sort -u)"
   registry:
     description: "Which registry to push into (ecr, cr.yandex, ghcr)"
-    required: false
-    default: "docker hub"
+    required: true
   registry_url:
     description: "The url of the registry (public.ecr.aws, cr.yandex, ghcr.io)"
-    required: false
-    default: "registry-1.docker.io"
+    required: true
   registry_id:
     description: "The ID of registry ((ECR):registry-alias, (Yandex):registry-id, (ghcr):namespace)"
     required: true
@@ -46,6 +44,24 @@ inputs:
 runs:
   using: composite
   steps:
+      - name: Check inputs
+        run: |
+          keys=("REGISTRY_TYPE" "REGISTRY_URL" "REGISTRY_ID" "IMAGE_USERNAME" "IMAGE_PASSWORD" \
+          "SPACE_USERNAME" "SPACE_PASSWORD" "API_URL" "ORG_ID")
+
+          vals=("${{inputs.registry}}" "${{inputs.registry_url}}" "${{inputs.registry_id}}" \
+          "${{inputs.username}}" "${{inputs.password}}" "${{inputs.space_username}}" "${{inputs.space_password}}" \
+          "${{inputs.api_url}}" "${{inputs.org_id}}")
+
+          for i in ${!vals[@]}
+          do
+            if [[ ${vals[i]} == "" ]];
+            then
+              echo "::error::${keys[i]} is NULL, exiting..."
+              exit 1
+            fi  
+          done
+        shell: 'bash'
       - name: "Install aws cli"
         if: ${{ inputs.registry == 'ecr*' }}
         uses: unfor19/install-aws-cli-action@v1
@@ -77,7 +93,8 @@ runs:
           fi
           echo "$username" >> USERNAME
           echo "$token" >> PASSWORD
-          echo $token | docker login --username $username --password-stdin $image_url
+          echo $token | docker login --username $username --password-stdin $image_url || \
+          { echo "::error::Failed to log in"; exit 1;}
         id: docker_login
         shell: 'bash'
       - uses: actions/setup-python@v4
@@ -85,7 +102,7 @@ runs:
           python-version: '3.11'
       - name: Install Malevich
         run: |
-          pip install malevich-space>=0.2.3
+          pip install malevich-space>=0.2.3 || {echo "::error::Failed to install malevich"; exit 1;}
         shell: 'bash'
       - name: Get branch name
         shell: bash
@@ -94,6 +111,7 @@ runs:
       - name: Build and Push
         run: |
           dirs=${{ inputs.directories }}
+          errors=()
           if [[ ${dirs[0]} == "" ]];
           then
            echo "No changed directories, exiting..."
@@ -111,7 +129,7 @@ runs:
             if [[ -e $dir ]] && [[ $name != .* ]] && [[ -f $name/Dockerfile ]];
             then
                 echo "Building ${name}"
-                docker build -q -t $image_url/$name:${{ github.sha }} $dir
+                docker build -q -t $image_url/$name:${{ github.sha }} $dir || {echo "::warning::Failed to build ${name}"; errors+=("${name}"); continue;}
                 if [[ ${{ inputs.registry }} == ecr* ]];
                 then
                   echo "Finding/Creating AWS repository"
@@ -126,7 +144,7 @@ runs:
                 fi
                 
                 echo "Pushing ${name}"
-                docker push -q --all-tags $image_url/$name
+                docker push -q --all-tags $image_url/$name || {echo "::warning::Failed to push ${name}"; errors+=("${name}"); continue;}
                 
                 echo -n "Testing ${name} "  
                 if [[ ${{ inputs.username }} == "$(cat USERNAME)" ]] && [[ ${{ inputs.password }} == "$(cat PASSWORD)" ]];
@@ -137,21 +155,25 @@ runs:
                   $image_url/$name:${{ github.sha }} \
                   --image-user=$(cat USERNAME) --image-token=$(cat PASSWORD) \
                   --space-username=${{ inputs.space_username }} --space-password=${{ inputs.space_password }} --space-org=${{ inputs.org_id }} \
-                  ${{ inputs.api_url }}
+                  ${{ inputs.api_url }} || {echo "::warning::Failed to report"; errors+=("${name}"); continue;}
                 else
                   echo "without credentials"
                   space ci report ./$dir ${{ steps.extract_branch.outputs.branch }} \
                   ${{ github.sha }} "$(git log | grep -P "commit [a-z0-9]{40}" -m 1 | cut -d ' ' -f2 | git log --format=%B -n 1)" done \
                   $image_url/$name:${{ github.sha }} \
                   --space-username=${{ inputs.space_username }} --space-password=${{ inputs.space_password }} --space-org=${{ inputs.org_id }} \
-                  ${{ inputs.api_url }}
+                  ${{ inputs.api_url }} || {echo "::warning::Failed to report ${name}"; errors+=("${name}"); continue;}
                 fi  
 
                 echo "Tagging ${name} as latest and pushing"
                 docker tag $image_url/$name:${{ github.sha }} $image_url/$name:latest
-                docker push -q --all-tags $image_url/$name
+                docker push -q --all-tags $image_url/$name || {echo "::warning::Failed to push ${name} as latest"; errors+=("${name}"); continue;}
             fi
           done
+          if [[ ${#errors[@]} > 0 ]];
+          then
+            echo "::error::Failed apps: ${errors[@]}"
+          fi
         shell: 'bash'
       - run: |
           rm USERNAME
