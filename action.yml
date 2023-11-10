@@ -132,7 +132,7 @@ runs:
             name=$(basename $dir)
             if [[ -e $dir ]] && [[ $name != .* ]] && [[ -f $name/Dockerfile ]];
             then
-              if [[ ${{ inputs.build }} ]];
+              if [[ ${{ inputs.build }} == true ]];
               then
                 echo "Building ${name}"
                 docker build -q -t $image_url/$name:${{ github.sha }} $dir || { echo "::warning::Failed to build ${name}" ; errors+=("${name}") ; continue ;}
