@@ -40,6 +40,10 @@ inputs:
   org_id:
     description: "space ci --space-org"
     required: true
+  build:
+    description: "Build image before report"
+    required: false
+    default: true
 
 runs:
   using: composite
@@ -128,6 +132,8 @@ runs:
             name=$(basename $dir)
             if [[ -e $dir ]] && [[ $name != .* ]] && [[ -f $name/Dockerfile ]];
             then
+              if [[ ${{ inputs.build }} ]];
+              then
                 echo "Building ${name}"
                 docker build -q -t $image_url/$name:${{ github.sha }} $dir || { echo "::warning::Failed to build ${name}" ; errors+=("${name}") ; continue ;}
                 if [[ ${{ inputs.registry }} == ecr* ]];
@@ -141,11 +147,11 @@ runs:
                     aws ecr describe-repositories --repository-names $name 2> /dev/null || \
                     aws ecr create-repository --repository-name $name 
                   fi
-                fi
-                
+                fi  
                 echo "Pushing ${name}"
                 docker push -q --all-tags $image_url/$name || { echo "::warning::Failed to push ${name}" ; errors+=("${name}") ; continue ;}
-                
+              fi
+
                 echo -n "Testing ${name} "  
                 if [[ ${{ inputs.username }} == "$(cat USERNAME)" ]] && [[ ${{ inputs.password }} == "$(cat PASSWORD)" ]];
                 then
