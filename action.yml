@@ -9,6 +9,10 @@ inputs:
     description: "Which directories to search in. By default searches in any directory which was changed from the previous commit."
     required: false
     default: "$(git log --name-only --diff-filter=d -1 | grep '/' | cut -d '/' -f1 | sort -u)"
+  prefix:
+    description: "Path to apps"
+    required: false
+    default: ''
   registry:
     description: "Which registry to push into (ecr, cr.yandex, ghcr)"
     required: true
@@ -110,12 +114,13 @@ runs:
         shell: 'bash'
       - name: Get branch name
         shell: bash
-        run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
+        run: echo "branch=$(git branch --show-current)" >> $GITHUB_OUTPUT
         id: extract_branch
       - name: Build and Push
         run: |
           dirs=${{ inputs.directories }}
           errors=()
+          commit_sha=$(git rev-parse HEAD)
           if [[ ${dirs[0]} == "" ]];
           then
            echo "No changed directories, exiting..."
@@ -129,13 +134,14 @@ runs:
           fi
           for dir in $dirs
           do
+            dir=${{ inputs.prefix }}/$dir
             name=$(basename $dir)
             if [[ -e $dir ]] && [[ $name != .* ]] && [[ -f $name/Dockerfile ]];
             then
               if [[ ${{ inputs.build }} == true ]];
               then
                 echo "Building ${name}"
-                docker build -q -t $image_url/$name:${{ github.sha }} $dir || { echo "::warning::Failed to build ${name}" ; errors+=("${name}") ; continue ;}
+                docker build -q -t $image_url/$name:$commit_sha $dir || { echo "::warning::Failed to build ${name}" ; errors+=("${name}") ; continue ;}
                 if [[ ${{ inputs.registry }} == ecr* ]];
                 then
                   echo "Finding/Creating AWS repository"
@@ -157,23 +163,23 @@ runs:
                 then
                   echo "with credentials"
                   space ci report ./$dir ${{ steps.extract_branch.outputs.branch }} \
-                  ${{ github.sha }} "$(git log | grep -P "commit [a-z0-9]{40}" -m 1 | cut -d ' ' -f2 | git log --format=%B -n 1)" done \
-                  $image_url/$name:${{ github.sha }} \
+                  $commit_sha "$(echo $commit_sha | git log --format=%B -n 1)" done \
+                  $image_url/$name:$commit_sha \
                   --image-user=$(cat USERNAME) --image-token=$(cat PASSWORD) \
                   --space-username=${{ inputs.space_username }} --space-password=${{ inputs.space_password }} --space-org=${{ inputs.org_id }} \
                   ${{ inputs.api_url }} || { echo "::warning::Failed to report" ; errors+=("${name}") ;}
                 else
                   echo "without credentials"
                   space ci report ./$dir ${{ steps.extract_branch.outputs.branch }} \
-                  ${{ github.sha }} "$(git log | grep -P "commit [a-z0-9]{40}" -m 1 | cut -d ' ' -f2 | git log --format=%B -n 1)" done \
-                  $image_url/$name:${{ github.sha }} \
+                  $commit_sha "$(git log | grep -P "commit [a-z0-9]{40}" -m 1 | cut -d ' ' -f2 | git log --format=%B -n 1)" done \
+                  $image_url/$name:$commit_sha \
                   --space-username=${{ inputs.space_username }} --space-password=${{ inputs.space_password }} --space-org=${{ inputs.org_id }} \
                   ${{ inputs.api_url }} || { echo "::warning::Failed to report ${name}" ; errors+=("${name}") ;}
                 fi  
               if [[ ${{ inputs.build }} == true ]];
               then
                 echo "Tagging ${name} as latest and pushing"
-                docker tag $image_url/$name:${{ github.sha }} $image_url/$name:latest
+                docker tag $image_url/$name:$commit_sha $image_url/$name:latest
                 docker push -q --all-tags $image_url/$name || { echo "::warning::Failed to push ${name} as latest" ; errors+=("${name}") ; continue ;}
               fi
             fi
