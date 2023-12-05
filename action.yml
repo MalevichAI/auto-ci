@@ -94,6 +94,7 @@ runs:
             echo 'Default log in'
             username=${{ inputs.username }}
             token=${{ inputs.password }}
+            image_url=${{ inputs.registry_url }}/${{ inputs.registry_id }}
           fi
           echo "$username" >> USERNAME
           echo "$token" >> PASSWORD
