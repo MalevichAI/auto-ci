@@ -9,10 +9,6 @@ inputs:
     description: "Which directories to search in. By default searches in any directory which was changed from the previous commit."
     required: false
     default: "$(git log --name-only --diff-filter=d -1 | grep '/' | cut -d '/' -f1 | sort -u)"
-  prefix:
-    description: "Path to apps"
-    required: false
-    default: ''
   registry:
     description: "Which registry to push into (ecr, cr.yandex, ghcr)"
     required: true
@@ -134,7 +130,6 @@ runs:
           fi
           for dir in $dirs
           do
-            dir=${{ inputs.prefix }}/$dir
             name=$(basename $dir)
             if [[ -e $dir ]] && [[ $name != .* ]] && [[ -f $name/Dockerfile ]];
             then
