@@ -12,9 +12,11 @@ inputs:
   registry:
     description: "Which registry to push into (ecr, cr.yandex, ghcr)"
     required: true
+    default: "ghcr"
   registry_url:
     description: "The url of the registry (public.ecr.aws, cr.yandex, ghcr.io)"
     required: true
+    default: "ghcr.io"
   registry_id:
     description: "The ID of registry ((ECR):registry-alias, (Yandex):registry-id, (ghcr):namespace)"
     required: true
@@ -149,7 +151,15 @@ runs:
                     aws ecr describe-repositories --repository-names $name > /dev/null || \
                     aws ecr create-repository --repository-name $name > /dev/null
                   fi
-                fi  
+                fi
+                if [[ ${{ inputs.registry }} == "ghcr" ]];
+                then
+                  echo "::notice::Linking package to repository"
+                  repo_url="https:\/\/$(echo ${{ github.repository }} | sed 's/\//\\\//g' )"
+                  cat Dockerfile | grep 'org.opencontainers.image.source' || \
+                  { cat Dockerfile | sed 's/\(^FROM .*\)/\1\nLABEL org.opencontainers.image.source=${repo_url}/ > ghcrDocker ; \
+                  mv ghcrDocker Dockerfile' ;}
+                fi
                 echo "Pushing ${name}"
                 docker push -q --all-tags $image_url/$name || { echo "::warning::Failed to push ${name}" ; errors+=("${name}") ; continue ;}
               fi
