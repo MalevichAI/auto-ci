@@ -8,7 +8,7 @@ inputs:
   directories:
     description: "Which directories to search in. By default searches in any directory which was changed from the previous commit."
     required: false
-    default: "$(git log --name-only --diff-filter=d -1 | grep '/' | cut -d '/' -f1 | sort -u)"
+    default: "$(git log --name-only -1 | grep '/' | cut -d '/' -f1 | sort -u)"
   registry:
     description: "Which registry to push into (ecr, cr.yandex, ghcr)"
     required: true
