@@ -142,9 +142,9 @@ runs:
                 then
                   echo "::notice::Linking package to repository"
                   repo_url="https:\/\/$(echo ${{ github.repository }} | sed 's/\//\\\//g' )"
-                  cat $name/Dockerfile | grep 'org.opencontainers.image.source' || \
-                  { cat $name/Dockerfile | sed 's/\(^FROM .*\)/\1\nLABEL org.opencontainers.image.source=${repo_url}/' > ghcrDocker ; \
-                  mv ghcrDocker $name/Dockerfile' ;}
+                  cat $name/Dockerfile | grep "org.opencontainers.image.source" || \
+                  { cat $name/Dockerfile | sed "s/\(^FROM .*\)/\1\nLABEL org.opencontainers.image.source=${repo_url}/" > ghcrDocker ; \
+                  mv ghcrDocker $name/Dockerfile ;}
                 fi
                 echo "Building ${name}"
                 docker build -q -t $image_url/$name:$commit_sha $dir || { echo "::warning::Failed to build ${name}" ; errors+=("${name}") ; continue ;}
