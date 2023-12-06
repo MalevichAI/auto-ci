@@ -141,7 +141,7 @@ runs:
                 if [[ ${{ inputs.registry }} == "ghcr" ]];
                 then
                   echo "Building ${name}"
-                  docker build --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" -t $image_url/$name:$commit_sha $dir ||\
+                  docker build -q --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" -t $image_url/$name:$commit_sha $dir ||\
                   { echo "::warning::Failed to build ${name}" ; errors+=("${name}") ; continue ;}
                 else
                   echo "Building ${name}"
