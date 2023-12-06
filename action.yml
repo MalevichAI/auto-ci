@@ -42,6 +42,7 @@ inputs:
   org_id:
     description: "space ci --space-org"
     required: true
+    default: ""
   build:
     description: "Build image before report"
     required: false
