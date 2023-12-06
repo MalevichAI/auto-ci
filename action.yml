@@ -140,7 +140,6 @@ runs:
               then
                 if [[ ${{ inputs.registry }} == "ghcr" ]];
                 then
-                  echo "::notice::Linking package to repository: https://github.com/${{ github.repository }}"
                   echo "Building ${name}"
                   docker build --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" -t $image_url/$name:$commit_sha $dir ||\
                   { echo "::warning::Failed to build ${name}" ; errors+=("${name}") ; continue ;}
@@ -163,24 +162,23 @@ runs:
                 echo "Pushing ${name}"
                 docker push -q --all-tags $image_url/$name || { echo "::warning::Failed to push ${name}" ; errors+=("${name}") ; continue ;}
               fi
-
-                echo -n "Testing ${name} "  
-                if [[ ${{ inputs.username }} == "$(cat USERNAME)" ]] && [[ ${{ inputs.password }} == "$(cat PASSWORD)" ]];
-                then
-                  echo "with credentials"
-                  space ci report ./$dir ${{ steps.extract_branch.outputs.branch }} \
-                  $commit_sha "$(echo $commit_sha | git log --format=%B -n 1)" done \
-                  $image_url/$name:$commit_sha \
-                  --image-user=$(cat USERNAME) --image-token=$(cat PASSWORD) \
-                  --space-username=${{ inputs.space_username }} --space-password=${{ inputs.space_password }} --space-org=${{ inputs.org_id }} \
-                  ${{ inputs.api_url }} || { echo "::warning::Failed to report" ; errors+=("${name}") ;}
-                else
-                  echo "without credentials"
-                  space ci report ./$dir ${{ steps.extract_branch.outputs.branch }} \
-                  $commit_sha "$(git log | grep -P "commit [a-z0-9]{40}" -m 1 | cut -d ' ' -f2 | git log --format=%B -n 1)" done \
-                  $image_url/$name:$commit_sha \
-                  --space-username=${{ inputs.space_username }} --space-password=${{ inputs.space_password }} --space-org=${{ inputs.org_id }} \
-                  ${{ inputs.api_url }} || { echo "::warning::Failed to report ${name}" ; errors+=("${name}") ;}
+              echo -n "Testing ${name} "  
+              if [[ ${{ inputs.username }} == "$(cat USERNAME)" ]] && [[ ${{ inputs.password }} == "$(cat PASSWORD)" ]];
+              then
+                echo "with credentials"
+                space ci report ./$dir ${{ steps.extract_branch.outputs.branch }} \
+                $commit_sha "$(echo $commit_sha | git log --format=%B -n 1)" done \
+                $image_url/$name:$commit_sha \
+                --image-user=$(cat USERNAME) --image-token=$(cat PASSWORD) \
+                --space-username=${{ inputs.space_username }} --space-password=${{ inputs.space_password }} --space-org=${{ inputs.org_id }} \
+                ${{ inputs.api_url }} || { echo "::warning::Failed to report" ; errors+=("${name}") ; continue ;}
+              else
+                echo "without credentials"
+                space ci report ./$dir ${{ steps.extract_branch.outputs.branch }} \
+                $commit_sha "$(git log | grep -P "commit [a-z0-9]{40}" -m 1 | cut -d ' ' -f2 | git log --format=%B -n 1)" done \
+                $image_url/$name:$commit_sha \
+                --space-username=${{ inputs.space_username }} --space-password=${{ inputs.space_password }} --space-org=${{ inputs.org_id }} \
+                ${{ inputs.api_url }} || { echo "::warning::Failed to report ${name}" ; errors+=("${name}") ; continue ;}
                 fi  
               if [[ ${{ inputs.build }} == true ]];
               then
