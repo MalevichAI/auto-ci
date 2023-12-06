@@ -169,15 +169,15 @@ runs:
                         $commit_sha \"${commit_msg}\" done $image_url/$name:$commit_sha \
                         --space-username=${{ inputs.space_username }} --space-password=${{ inputs.space_password }}"
 
-              if [[ ${{ inputs.username }} == "$(cat USERNAME)" ]] && [[ ${{ inputs.password }} == "$(cat PASSWORD)" ]];
+              if [[ "${{ inputs.username }}" == "$(cat USERNAME)" ]] && [[ "${{ inputs.password }}" == "$(cat PASSWORD)" ]];
               then
                 echo -n "with credentials "
                 cred_cmd="${bash_cmd} --image-user=$(cat USERNAME) --image-token=$(cat PASSWORD)"
               else
                 echo "without credentials"
                 cred_cmd=$bash_cmd
-              fi  
-              if [[ ${{ inputs.org_id }} == 'None' ]];
+              fi
+              if [[ "${{ inputs.org_id }}" == "None" ]];
               then
                 echo "without org"
                 final_cmd=$cred_cmd
