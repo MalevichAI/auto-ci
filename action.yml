@@ -183,7 +183,7 @@ runs:
                 final_cmd=$cred_cmd
               else
                 echo "with org"
-                final_cmd="${cred_cmd} --space_org=${{ inputs.org_id }}"
+                final_cmd="${cred_cmd} --space-org=${{ inputs.org_id }}"
               fi
               echo "${final_cmd}"
               bash -c "${final_cmd} ${{ inputs.api_url }}" || { echo "::warning::Failed to report" ; errors+=("${name}") ; continue ;}  
