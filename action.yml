@@ -157,7 +157,7 @@ runs:
                   echo "::notice::Linking package to repository"
                   repo_url="https:\/\/$(echo ${{ github.repository }} | sed 's/\//\\\//g' )"
                   cat $name/Dockerfile | grep 'org.opencontainers.image.source' || \
-                  { cat $name/Dockerfile | sed 's/\(^FROM .*\)/\1\nLABEL org.opencontainers.image.source=${repo_url}/ > ghcrDocker ; \
+                  { cat $name/Dockerfile | sed 's/\(^FROM .*\)/\1\nLABEL org.opencontainers.image.source=${repo_url}/' > ghcrDocker ; \
                   mv ghcrDocker $name/Dockerfile' ;}
                 fi
                 echo "Pushing ${name}"
