@@ -138,6 +138,14 @@ runs:
             then
               if [[ ${{ inputs.build }} == true ]];
               then
+                if [[ ${{ inputs.registry }} == "ghcr" ]];
+                then
+                  echo "::notice::Linking package to repository"
+                  repo_url="https:\/\/$(echo ${{ github.repository }} | sed 's/\//\\\//g' )"
+                  cat $name/Dockerfile | grep 'org.opencontainers.image.source' || \
+                  { cat $name/Dockerfile | sed 's/\(^FROM .*\)/\1\nLABEL org.opencontainers.image.source=${repo_url}/' > ghcrDocker ; \
+                  mv ghcrDocker $name/Dockerfile' ;}
+                fi
                 echo "Building ${name}"
                 docker build -q -t $image_url/$name:$commit_sha $dir || { echo "::warning::Failed to build ${name}" ; errors+=("${name}") ; continue ;}
                 if [[ ${{ inputs.registry }} == ecr* ]];
@@ -151,14 +159,6 @@ runs:
                     aws ecr describe-repositories --repository-names $name > /dev/null || \
                     aws ecr create-repository --repository-name $name > /dev/null
                   fi
-                fi
-                if [[ ${{ inputs.registry }} == "ghcr" ]];
-                then
-                  echo "::notice::Linking package to repository"
-                  repo_url="https:\/\/$(echo ${{ github.repository }} | sed 's/\//\\\//g' )"
-                  cat $name/Dockerfile | grep 'org.opencontainers.image.source' || \
-                  { cat $name/Dockerfile | sed 's/\(^FROM .*\)/\1\nLABEL org.opencontainers.image.source=${repo_url}/' > ghcrDocker ; \
-                  mv ghcrDocker $name/Dockerfile' ;}
                 fi
                 echo "Pushing ${name}"
                 docker push -q --all-tags $image_url/$name || { echo "::warning::Failed to push ${name}" ; errors+=("${name}") ; continue ;}
