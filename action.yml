@@ -140,14 +140,14 @@ runs:
               then
                 if [[ ${{ inputs.registry }} == "ghcr" ]];
                 then
-                  echo "::notice::Linking package to repository"
-                  repo_url="https:\/\/$(echo ${{ github.repository }} | sed 's/\//\\\//g' )"
-                  cat $name/Dockerfile | grep "org.opencontainers.image.source" || \
-                  { cat $name/Dockerfile | sed "s/\(^FROM .*\)/\1\nLABEL org.opencontainers.image.source=${repo_url}/" > ghcrDocker ; \
-                  mv ghcrDocker $name/Dockerfile ;}
+                  echo "::notice::Linking package to repository: https://github.com/${{ github.repository }}"
+                  echo "Building ${name}"
+                  docker build --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" -t $image_url/$name:$commit_sha $dir ||\
+                  { echo "::warning::Failed to build ${name}" ; errors+=("${name}") ; continue ;}
+                elseg
+                  echo "Building ${name}"
+                  docker build -q -t $image_url/$name:$commit_sha $dir || { echo "::warning::Failed to build ${name}" ; errors+=("${name}") ; continue ;}
                 fi
-                echo "Building ${name}"
-                docker build -q -t $image_url/$name:$commit_sha $dir || { echo "::warning::Failed to build ${name}" ; errors+=("${name}") ; continue ;}
                 if [[ ${{ inputs.registry }} == ecr* ]];
                 then
                   echo "Finding/Creating AWS repository"
