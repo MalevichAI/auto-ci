@@ -165,24 +165,27 @@ runs:
               fi
               echo -n "Testing ${name} "
               bash_cmd="space ci report ./$dir ${{ steps.extract_branch.outputs.branch }} \
-                  $commit_sha "$(echo $commit_sha | git log --format=%B -n 1)" done \
+                  $commit_sha \"$(echo $commit_sha | git log --format=%B -n 1)\" done \
                   $image_url/$name:$commit_sha \
                   --space-username=${{ inputs.space_username }} --space-password=${{ inputs.space_password }}"
+
               if [[ ${{ inputs.username }} == "$(cat USERNAME)" ]] && [[ ${{ inputs.password }} == "$(cat PASSWORD)" ]];
               then
                 echo -n "with credentials "
-                bash_cmd="${bash_cmd} --image-user=$(cat USERNAME) --image-token=$(cat PASSWORD)"
+                cred_cmd="${cred_cmd} --image-user=$(cat USERNAME) --image-token=$(cat PASSWORD)"
               else
                 echo "without credentials"
+                cred_cmd=$bash_cmd
               fi  
               if [[ ${{ inputs.org_id }} != 'None' ]];
               then
                 echo "with org"
-                bash_cmd="${bash_cmd} --space_org=${{ inputs.org_id }}"
+                final_cmd="${cred_cmd} --space_org=${{ inputs.org_id }}"
               else
                 echo "without org"
+                final_cmd=$bash_cmd
               fi
-              bash -c "${bash_cmd} ${{ inputs.api_url }}" || { echo "::warning::Failed to report" ; errors+=("${name}") ; continue ;}
+              bash -c "${final_cmd} ${{ inputs.api_url }}" || { echo "::warning::Failed to report" ; errors+=("${name}") ; continue ;}  
               if [[ ${{ inputs.build }} == true ]];
               then
                 echo "Tagging ${name} as latest and pushing"
