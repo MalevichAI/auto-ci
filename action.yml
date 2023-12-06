@@ -144,7 +144,7 @@ runs:
                   echo "Building ${name}"
                   docker build --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" -t $image_url/$name:$commit_sha $dir ||\
                   { echo "::warning::Failed to build ${name}" ; errors+=("${name}") ; continue ;}
-                elseg
+                else
                   echo "Building ${name}"
                   docker build -q -t $image_url/$name:$commit_sha $dir || { echo "::warning::Failed to build ${name}" ; errors+=("${name}") ; continue ;}
                 fi
