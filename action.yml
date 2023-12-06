@@ -53,11 +53,11 @@ runs:
       - name: Check inputs
         run: |
           keys=("REGISTRY_TYPE" "REGISTRY_URL" "REGISTRY_ID" "IMAGE_USERNAME" "IMAGE_PASSWORD" \
-          "SPACE_USERNAME" "SPACE_PASSWORD" "API_URL" "ORG_ID")
+          "SPACE_USERNAME" "SPACE_PASSWORD" "API_URL")
 
           vals=("${{inputs.registry}}" "${{inputs.registry_url}}" "${{inputs.registry_id}}" \
           "${{inputs.username}}" "${{inputs.password}}" "${{inputs.space_username}}" "${{inputs.space_password}}" \
-          "${{inputs.api_url}}" "${{inputs.org_id}}")
+          "${{inputs.api_url}}")
 
           for i in ${!vals[@]}
           do
@@ -100,7 +100,7 @@ runs:
           fi
           echo "$username" >> USERNAME
           echo "$token" >> PASSWORD
-          echo $token | docker login --username $username --password-stdin $image_url || \
+          echo $token | docker login --username $username --password-stdin ${{ inputs.registry_url }} || \
           { echo "::error::Failed to log in" ; exit 1 ;}
         id: docker_login
         shell: 'bash'
@@ -170,14 +170,14 @@ runs:
                 $commit_sha "$(echo $commit_sha | git log --format=%B -n 1)" done \
                 $image_url/$name:$commit_sha \
                 --image-user=$(cat USERNAME) --image-token=$(cat PASSWORD) \
-                --space-username=${{ inputs.space_username }} --space-password=${{ inputs.space_password }} --space-org=${{ inputs.org_id }} \
+                --space-username=${{ inputs.space_username }} --space-password=${{ inputs.space_password }} --space-org="${{ inputs.org_id }}" \
                 ${{ inputs.api_url }} || { echo "::warning::Failed to report" ; errors+=("${name}") ; continue ;}
               else
                 echo "without credentials"
                 space ci report ./$dir ${{ steps.extract_branch.outputs.branch }} \
                 $commit_sha "$(git log | grep -P "commit [a-z0-9]{40}" -m 1 | cut -d ' ' -f2 | git log --format=%B -n 1)" done \
                 $image_url/$name:$commit_sha \
-                --space-username=${{ inputs.space_username }} --space-password=${{ inputs.space_password }} --space-org=${{ inputs.org_id }} \
+                --space-username=${{ inputs.space_username }} --space-password=${{ inputs.space_password }} --space-org="${{ inputs.org_id }}" \
                 ${{ inputs.api_url }} || { echo "::warning::Failed to report ${name}" ; errors+=("${name}") ; continue ;}
                 fi  
               if [[ ${{ inputs.build }} == true ]];
