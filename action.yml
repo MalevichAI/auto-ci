@@ -121,6 +121,7 @@ runs:
           dirs=${{ inputs.directories }}
           errors=()
           commit_sha=$(git rev-parse HEAD)
+          commit_msg="$(echo $commit_sha | git log --format=%B -n 1)"
           if [[ ${dirs[0]} == "" ]];
           then
            echo "No changed directories, exiting..."
@@ -165,26 +166,26 @@ runs:
               fi
               echo -n "Testing ${name} "
               bash_cmd="space ci report ./$dir ${{ steps.extract_branch.outputs.branch }} \
-                  $commit_sha \"$(echo $commit_sha | git log --format=%B -n 1)\" done \
-                  $image_url/$name:$commit_sha \
-                  --space-username=${{ inputs.space_username }} --space-password=${{ inputs.space_password }}"
+                        $commit_sha \"${commit_msg}\" done $image_url/$name:$commit_sha \
+                        --space-username=${{ inputs.space_username }} --space-password=${{ inputs.space_password }}"
 
               if [[ ${{ inputs.username }} == "$(cat USERNAME)" ]] && [[ ${{ inputs.password }} == "$(cat PASSWORD)" ]];
               then
                 echo -n "with credentials "
-                cred_cmd="${cred_cmd} --image-user=$(cat USERNAME) --image-token=$(cat PASSWORD)"
+                cred_cmd="${bash_cmd} --image-user=$(cat USERNAME) --image-token=$(cat PASSWORD)"
               else
                 echo "without credentials"
                 cred_cmd=$bash_cmd
               fi  
-              if [[ ${{ inputs.org_id }} != 'None' ]];
+              if [[ ${{ inputs.org_id }} == "None" ]];
               then
+                echo "without org"
+                final_cmd=$cred_cmd
+              else
                 echo "with org"
                 final_cmd="${cred_cmd} --space_org=${{ inputs.org_id }}"
-              else
-                echo "without org"
-                final_cmd=$bash_cmd
               fi
+              echo "${final_cmd}"
               bash -c "${final_cmd} ${{ inputs.api_url }}" || { echo "::warning::Failed to report" ; errors+=("${name}") ; continue ;}  
               if [[ ${{ inputs.build }} == true ]];
               then
