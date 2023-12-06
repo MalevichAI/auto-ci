@@ -177,7 +177,7 @@ runs:
                 echo "without credentials"
                 cred_cmd=$bash_cmd
               fi
-              if [[ "${{ inputs.org_id }}" == "None" ]];
+              if [[ "${{ inputs.org_id }}" == "empty" ]];
               then
                 echo "without org"
                 final_cmd=$cred_cmd
