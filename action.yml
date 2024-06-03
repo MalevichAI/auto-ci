@@ -110,7 +110,8 @@ runs:
           python-version: '3.11'
       - name: Install Malevich
         run: |
-          pip install malevich-space>=0.2.3 || { echo "::error::Failed to install malevich" ; exit 1 ;}
+          pip install "malevich-space" || { echo "::error::Failed to install malevich-space" ; exit 1 ;}
+          pip install "malevich-coretools" || { echo "::error::Failed to install malevich-coretools" ; exit 1 ;}
         shell: 'bash'
       - name: Get branch name
         shell: bash
