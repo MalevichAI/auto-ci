@@ -30,6 +30,10 @@ inputs:
     description: "Region for AWS"
     required: false
     default: 'us-east-1'
+  space_upload:
+    description: "Upload app to Space"
+    required: false
+    default: true
   space_username:
     description: "Malevich-space username"
     required: true
@@ -53,12 +57,10 @@ runs:
   steps:
       - name: Check inputs
         run: |
-          keys=("REGISTRY_TYPE" "REGISTRY_URL" "REGISTRY_ID" "IMAGE_USERNAME" "IMAGE_PASSWORD" \
-          "SPACE_USERNAME" "SPACE_PASSWORD" "API_URL")
+          keys=("REGISTRY_TYPE" "REGISTRY_URL" "REGISTRY_ID" "IMAGE_USERNAME" "IMAGE_PASSWORD")
 
           vals=("${{inputs.registry}}" "${{inputs.registry_url}}" "${{inputs.registry_id}}" \
-          "${{inputs.username}}" "${{inputs.password}}" "${{inputs.space_username}}" "${{inputs.space_password}}" \
-          "${{inputs.api_url}}")
+          "${{inputs.username}}" "${{inputs.password}}")
 
           for i in ${!vals[@]}
           do
@@ -165,29 +167,32 @@ runs:
                 echo "Pushing ${name}"
                 docker push -q --all-tags $image_url/$name || { echo "::warning::Failed to push ${name}" ; errors+=("${name}") ; continue ;}
               fi
-              echo -n "Testing ${name} "
-              bash_cmd="space ci report ./$dir ${{ steps.extract_branch.outputs.branch }} \
-                        $commit_sha \"${commit_msg}\" done $image_url/$name:$commit_sha \
-                        --space-username=${{ inputs.space_username }} --space-password=${{ inputs.space_password }}"
+              if [[ ${{inputs.space_upload}} == true ]];
+              then
+                echo -n "Uploading ${name} to space..."
+                bash_cmd="space ci report ./$dir ${{ steps.extract_branch.outputs.branch }} \
+                          $commit_sha \"${commit_msg}\" done $image_url/$name:$commit_sha \
+                          --space-username=${{ inputs.space_username }} --space-password=${{ inputs.space_password }}"
 
-              if [[ "${{ inputs.username }}" == "$(cat USERNAME)" ]] && [[ "${{ inputs.password }}" == "$(cat PASSWORD)" ]];
-              then
-                echo -n "with credentials "
-                cred_cmd="${bash_cmd} --image-user=$(cat USERNAME) --image-token=$(cat PASSWORD)"
-              else
-                echo "without credentials"
-                cred_cmd=$bash_cmd
+                if [[ "${{ inputs.username }}" == "$(cat USERNAME)" ]] && [[ "${{ inputs.password }}" == "$(cat PASSWORD)" ]];
+                then
+                  echo -n "with credentials "
+                  cred_cmd="${bash_cmd} --image-user=$(cat USERNAME) --image-token=$(cat PASSWORD)"
+                else
+                  echo "without credentials"
+                  cred_cmd=$bash_cmd
+                fi
+                if [[ "${{ inputs.org_id }}" == "empty" ]];
+                then
+                  echo "without org"
+                  final_cmd=$cred_cmd
+                else
+                  echo "with org"
+                  final_cmd="${cred_cmd} --space-org=${{ inputs.org_id }}"
+                fi
+                echo "${final_cmd}"
+                bash -c "${final_cmd} ${{ inputs.api_url }}" || { echo "::warning::Failed to report" ; errors+=("${name}") ; continue ;}  
               fi
-              if [[ "${{ inputs.org_id }}" == "empty" ]];
-              then
-                echo "without org"
-                final_cmd=$cred_cmd
-              else
-                echo "with org"
-                final_cmd="${cred_cmd} --space-org=${{ inputs.org_id }}"
-              fi
-              echo "${final_cmd}"
-              bash -c "${final_cmd} ${{ inputs.api_url }}" || { echo "::warning::Failed to report" ; errors+=("${name}") ; continue ;}  
               if [[ ${{ inputs.build }} == true ]];
               then
                 echo "Tagging ${name} as latest and pushing"
